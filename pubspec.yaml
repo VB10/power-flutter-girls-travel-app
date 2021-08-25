@@ -25,6 +25,13 @@ dependencies:
     sdk: flutter
   kartal: ^2.1.0
   animated_text_kit: ^4.2.1
+  #network
+  vexana: ^2.3.0
+  #mobx
+  mobx: ^2.0.4
+  flutter_mobx: ^2.0.2
+  build_runner: ^2.1.1
+  mobx_codegen: any
 
 
   # The following adds the Cupertino Icons font to your application.

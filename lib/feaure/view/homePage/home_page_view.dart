@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:travel_application/core/constants/app_constants.dart';
 import 'package:travel_application/core/constants/color_theme.dart';
 import 'package:kartal/kartal.dart';
 import 'package:travel_application/core/constants/image_constants.dart';
 import 'package:travel_application/core/constants/text.constants.dart';
+import 'package:travel_application/feaure/model/upcoming_grid_model.dart';
+import 'package:travel_application/feaure/service/travel_page_service.dart';
+import 'package:travel_application/feaure/viewModel/travel_view_model.dart';
 import 'package:travel_application/product/widgets/clipper_widget.dart';
 import 'dart:math' as math;
 
 import 'package:travel_application/product/widgets/upcoming_card_widget.dart';
+import 'package:vexana/vexana.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,6 +22,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late final TravelViewModel viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    final manager =
+        NetworkManager(options: BaseOptions(baseUrl: AppConstants.baseURl));
+    viewModel = TravelViewModel(TravelPageService(manager));
+    viewModel.fetcTravelItem();
+  }
+
   TextStyle? get subtitleStyle => Theme.of(context)
       .textTheme
       .headline5
@@ -36,43 +53,61 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitleWithButton(),
                 favoritesList(context),
                 Text(UITravelTextConstanst.subtitle2, style: subtitleStyle),
-                Upcoming(items: upcoming()),
+                Observer(builder: (_) {
+                  return viewModel.isLoading
+                      ? LinearProgressIndicator()
+                      : Upcoming(
+                          items: viewModel.travelItems
+                              .map((e) => UpcomingPhoto(
+                                  imageUrl: e.upcomingBackground,
+                                  flagUrl: e.upcomingFlag,
+                                  upcomingString: e.upcomingPlace))
+                              .toList());
+                }),
                 SizedBox(
                   height: context.height * 0.02,
                 ),
                 Text(UITravelTextConstanst.subtitle3, style: subtitleStyle),
-                ListView.builder(
-                    itemCount: 4,
-                    shrinkWrap: true,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                    blurRadius: 5,
-                                    offset: Offset(1, 1),
-                                    color: Colors.grey)
-                              ]),
-                          child: ListTile(
-                              leading:
-                                  Icon(Icons.car_rental, color: Colors.blue),
-                              title: Text('Jannuary 14, Monday',
-                                  style: TextStyle(
-                                      color: Colors.blue,
-                                      fontWeight: FontWeight.bold)),
-                              subtitle: Text('\$10',
-                                  style: TextStyle(color: Colors.blue)),
-                              trailing: Icon(
-                                Icons.phone,
-                                color: Colors.green,
-                              )),
-                        ),
-                      );
-                    })
+                Observer(builder: (_) {
+                  return viewModel.isLoading
+                      ? CircularProgressIndicator()
+                      : ListView.builder(
+                          itemCount: viewModel.travelItems.length,
+                          shrinkWrap: true,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                          blurRadius: 5,
+                                          offset: Offset(1, 1),
+                                          color: Colors.grey)
+                                    ]),
+                                child: ListTile(
+                                    leading: Icon(Icons.car_rental,
+                                        color: Colors.blue),
+                                    title: Text(
+                                        viewModel.travelItems[index].rentDay
+                                            .toString(),
+                                        style: TextStyle(
+                                            color: Colors.blue,
+                                            fontWeight: FontWeight.bold)),
+                                    subtitle: Text(
+                                        viewModel.travelItems[index].rentPrice
+                                            .toString(),
+                                        style: TextStyle(color: Colors.blue)),
+                                    trailing: Icon(
+                                      Icons.phone,
+                                      color: Colors.green,
+                                    )),
+                              ),
+                            );
+                          });
+                })
               ],
             ),
           )
@@ -84,33 +119,37 @@ class _HomeScreenState extends State<HomeScreen> {
   SizedBox favoritesList(BuildContext context) {
     return SizedBox(
       height: context.dynamicHeight(0.2),
-      child: ListView.builder(
-          itemCount: 4,
-          scrollDirection: Axis.horizontal,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: context.horizontalPaddingNormal,
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(60),
-                    child: Image.network(
-                      'https://media.kommunity.com/avatar/059df322-7cda-4157-8e9e-47c4a83426b3_avatar_5f2cf9025e420.jpg',
-                      height: context.height * 0.1,
-                      width: context.dynamicWidth(0.2),
-                      fit: BoxFit.cover,
+      child: Observer(builder: (_) {
+        return viewModel.isLoading
+            ? CircularProgressIndicator()
+            : ListView.builder(
+                itemCount: viewModel.travelItems.length,
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: context.horizontalPaddingNormal,
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(60),
+                          child: Image.network(
+                            viewModel.travelItems[index].photo.toString(),
+                            height: context.height * 0.1,
+                            width: context.dynamicWidth(0.2),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Text(viewModel.travelItems[index].name.toString(),
+                            style: context.textTheme.subtitle1
+                                ?.copyWith(color: _color.blue)),
+                        Text(viewModel.travelItems[index].job.toString(),
+                            style: context.textTheme.subtitle2
+                                ?.copyWith(color: context.randomColor)),
+                      ],
                     ),
-                  ),
-                  Text('Beyza Karadeniz',
-                      style: context.textTheme.subtitle1
-                          ?.copyWith(color: _color.blue)),
-                  Text('Developer',
-                      style: context.textTheme.subtitle2
-                          ?.copyWith(color: context.randomColor)),
-                ],
-              ),
-            );
-          }),
+                  );
+                });
+      }),
     );
   }
 
